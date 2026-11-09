@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fleet Wolf Inspection Tracker</title>
+<style>
+#fwInspect{--night:#071321;--paper:#0c1e2e;--soft:#102639;--cyan:#52e8eb;--ink:#effafb;--muted:#adc7cf;--line:#2b4b5e;--bad:#ff9d94;--bad-bg:#4d1a16;--warn:#ffcb73;--warn-bg:#47330c;--good:#6df0b2;--good-bg:#0f3a2a;--beta:#c9a7ff;--beta-bg:#2c1d4a;
+  max-width:1400px;margin:0 auto;padding:22px;background:var(--night);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-sizing:border-box;color-scheme:dark;min-height:100vh}
+html,body{margin:0;background:#071321}
+#fwInspect *{box-sizing:border-box}
+#fwInspect [hidden]{display:none!important}
+#fwInspect h1,#fwInspect h2,#fwInspect h3,#fwInspect p{margin:0}
+#fwInspect h1{font-size:22px;font-weight:650;letter-spacing:.2px}
+#fwInspect h2{font-size:15px;font-weight:650;margin-bottom:10px}
+#fwInspect .sub{color:var(--muted);font-size:13px}
+#fwInspect button,#fwInspect select,#fwInspect input{font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:8px;min-height:34px;padding:5px 10px}
+#fwInspect button{cursor:pointer}
+#fwInspect button:hover{border-color:var(--cyan)}
+#fwInspect button.primary{background:var(--cyan);color:#06222a;border-color:var(--cyan);font-weight:650}
+#fwInspect input[type=date]{color-scheme:dark}
+#fwInspect label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.fw-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.fw-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fw-quick{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 16px}
+.fw-quick button{min-height:28px!important;padding:2px 10px!important;font-size:12px}
+.fw-quick button.on{border-color:var(--cyan);color:var(--cyan)}
+.fw-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.fw-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.fw-kpi{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.fw-kpi b{display:block;font-size:26px;font-weight:650;line-height:1.2}
+.fw-kpi span{color:var(--muted);font-size:12px}
+.fw-kpi small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.fw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px}
+.fw-calc-top{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.fw-avgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.fw-avgs div{background:var(--soft);border-radius:8px;padding:8px 10px}
+.fw-avgs b{display:block;font-size:18px}
+.fw-avgs span{font-size:11px;color:var(--muted)}
+table.fw{width:100%;border-collapse:collapse;font-size:13px}
+table.fw th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.fw td{padding:6px 8px;border-bottom:1px solid rgba(43,75,94,.5);vertical-align:top}
+table.fw td.n,table.fw th.n{text-align:right;font-variant-numeric:tabular-nums}
+.fw-scroll{max-height:420px;overflow:auto}
+.fw-meter{height:8px;background:var(--soft);border-radius:4px;overflow:hidden;min-width:60px}
+.fw-meter i{display:block;height:100%;background:var(--cyan);border-radius:4px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.pill.open{background:var(--bad-bg);color:var(--bad)}
+.pill.fixed{background:var(--good-bg);color:var(--good)}
+.pill.nn{background:var(--warn-bg);color:var(--warn)}
+.pill.beta{background:var(--beta-bg);color:var(--beta)}
+.pill.std{background:var(--soft);color:var(--muted)}
+.pill.unsafe{background:var(--bad-bg);color:var(--bad)}
+.fw-status{color:var(--muted);font-size:13px;min-height:20px;margin-bottom:10px}
+.fw-status.err{color:var(--bad)}
+.fw-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.fw-tabs button.on{border-color:var(--cyan);color:var(--cyan)}
+.fw-note{font-size:12px;color:var(--muted);margin-top:8px}
+.fw-sig{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+.fw-sig a{color:var(--cyan)}
+.fw-empty{color:var(--muted);padding:14px 0}
+@media (max-width:600px){#fwInspect{padding:14px}.fw-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="fwInspect">
+  <div class="fw-head">
+    <div>
+      <h1>Inspection &amp; Defect Tracker</h1>
+      <p class="sub">Every asset inspection (standard and new beta) and every defect, with counts by day, week, month and year.</p>
+    </div>
+    <div class="fw-bar">
+      <label>From<input type="date" id="fw-from"></label>
+      <label>To<input type="date" id="fw-to"></label>
+      <button class="primary" id="fw-load" type="button">Load</button>
+      <button id="fw-csv" type="button">Export CSV</button>
+    </div>
+  </div>
+  <div class="fw-quick" id="fw-quick"></div>
+  <div class="fw-bar" style="margin-bottom:14px">
+    <label>Version<select id="f-version"><option value="">All versions</option><option value="std">Standard (old)</option><option value="beta">New (beta)</option></select></label>
+    <label>Inspection type<select id="f-type"><option value="">All types</option></select></label>
+    <label>Checklist<select id="f-list"><option value="">All checklists</option></select></label>
+    <label>Asset<select id="f-asset"><option value="">All assets</option></select></label>
+    <label>Driver<select id="f-driver"><option value="">All drivers</option></select></label>
+    <label>Defect status<select id="f-status"><option value="">Any</option><option value="NotRepaired">Open</option><option value="Repaired">Repaired</option><option value="NotNecessary">Not necessary</option></select></label>
+  </div>
+  <p class="fw-status" id="fw-status" role="status"></p>
+
+  <div class="fw-kpis" id="fw-kpis"></div>
+
+  <div class="fw-card" style="margin-bottom:14px">
+    <h2>Calculator: how many done</h2>
+    <div class="fw-calc-top">
+      <label>Count<select id="c-metric">
+        <option value="insp">Inspections done</option>
+        <option value="defects">Defects reported</option>
+        <option value="repaired">Defects repaired</option>
+        <option value="withDefects">Inspections with defects</option>
+      </select></label>
+      <label>Group by<select id="c-period">
+        <option value="day">Day</option><option value="week" selected>Week</option><option value="month">Month</option><option value="year">Year</option>
+      </select></label>
+      <label>Split by<select id="c-split">
+        <option value="">Nothing</option><option value="version">Version (old / beta)</option><option value="type">Inspection type</option><option value="driver">Driver</option>
+      </select></label>
+    </div>
+    <div class="fw-avgs" id="c-avgs"></div>
+    <div class="fw-scroll"><table class="fw" id="c-table"></table></div>
+  </div>
+
+  <div class="fw-grid">
+    <div class="fw-card">
+      <h2>Inspection types</h2>
+      <div class="fw-scroll"><table class="fw" id="t-types"></table></div>
+    </div>
+    <div class="fw-card">
+      <h2>Checklists (old vs new beta)</h2>
+      <div class="fw-scroll"><table class="fw" id="t-lists"></table></div>
+      <p class="fw-note">Geotab doesn't yet document how beta inspections are marked in the data. Click a checklist's tag to switch it between Standard and New (beta); your choice is saved for this database.</p>
+    </div>
+  </div>
+
+  <div class="fw-grid">
+    <div class="fw-card">
+      <h2>Defect types</h2>
+      <div class="fw-scroll"><table class="fw" id="t-defects"></table></div>
+    </div>
+    <div class="fw-card">
+      <h2>Assets with the most defects</h2>
+      <div class="fw-scroll"><table class="fw" id="t-assets"></table></div>
+    </div>
+  </div>
+
+  <div class="fw-card" style="margin-bottom:14px">
+    <h2>By driver</h2>
+    <div class="fw-scroll"><table class="fw" id="t-drivers"></table></div>
+  </div>
+
+  <div class="fw-card">
+    <div class="fw-tabs" id="fw-tabs">
+      <button type="button" data-tab="defects" class="on">All defects</button>
+      <button type="button" data-tab="insp">All inspections</button>
+    </div>
+    <div class="fw-scroll" style="max-height:560px"><table class="fw" id="t-list"></table></div>
+  </div>
+
+  <p class="fw-sig">Designed by Fleet Wolf · For support, technical service or customization: <a href="mailto:randy@fleetwolf.com">randy@fleetwolf.com</a></p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var DAY = 86400000;
+  var TYPE_NAMES = { PreTrip: 'Pre-trip', PostTrip: 'Post-trip', InTrip: 'In-trip / en route', Log: 'General', Unknown: 'Not set' };
+  var STATUS_NAMES = { NotRepaired: 'Open', Repaired: 'Repaired', NotNecessary: 'Not necessary' };
+  // Classic DVIRLog fields; anything template-like beyond these suggests the new inspections.
+  var BETA_HINT = /template|form|checklist|inspectionType|assetInspection/i;
+
+  var api = null, dbName = 'demo', logs = [], tab = 'defects';
+  var root = document.getElementById('fwInspect');
+  var $ = function (id) { return document.getElementById(id); };
+
+  function status(text, err) { var s = $('fw-status'); s.textContent = text || ''; s.className = 'fw-status' + (err ? ' err' : ''); }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function fmt(n) { return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 1 }); }
+  function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function parseDay(v, end) { var p = v.split('-'); return new Date(+p[0], +p[1] - 1, +p[2] + (end ? 1 : 0)); }
+  function dayCount(a, b) { return Math.max(1, Math.round((b - a) / DAY)); }
+  function when(iso) { return iso ? new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''; }
+
+  // ---- beta checklist tags (per database, per browser) ----
+  function tagKey() { return 'fwInspectBeta:' + dbName; }
+  function readTags() { try { return JSON.parse(localStorage.getItem(tagKey()) || '{}'); } catch (e) { return {}; } }
+  function writeTags(t) { try { localStorage.setItem(tagKey(), JSON.stringify(t)); } catch (e) { } }
+
+  // ---- API ----
+  function call(method, params) {
+    return new Promise(function (resolve, reject) {
+      api.call(method, params, resolve, function (e) { reject(new Error((e && e.message) || String(e))); });
+    });
+  }
+  function getAll(typeName, fields) {
+    return call('Get', { typeName: typeName, resultsLimit: 50000, propertySelector: { fields: fields } }).catch(function () { return []; });
+  }
+  // Fetch DVIR logs window by window; split any window that hits the limit.
+  function fetchLogs(from, to, progress) {
+    var LIMIT = 5000, out = [], windows = [];
+    for (var t = from.getTime(); t < to.getTime(); t += 14 * DAY) windows.push([t, Math.min(t + 14 * DAY, to.getTime())]);
+    var done = 0;
+    function one(w) {
+      return call('Get', { typeName: 'DVIRLog', resultsLimit: LIMIT, search: { fromDate: new Date(w[0]).toISOString(), toDate: new Date(w[1]).toISOString() } }).then(function (rows) {
+        if (rows.length >= LIMIT && w[1] - w[0] > 3600000) {
+          var mid = Math.floor((w[0] + w[1]) / 2);
+          return one([w[0], mid]).then(function () { return one([mid, w[1]]); });
+        }
+        out.push.apply(out, rows);
+      });
+    }
+    return windows.reduce(function (p, w) {
+      return p.then(function () { return one(w); }).then(function () { done++; progress(done, windows.length, out.length); });
+    }, Promise.resolve()).then(function () {
+      var seen = {}; return out.filter(function (r) { if (seen[r.id]) return false; seen[r.id] = 1; return true; });
+    });
+  }
+
+  function nameOf(map, ref) { if (!ref) return ''; if (typeof ref === 'string') return ref === 'UnknownDriverId' ? 'Unknown driver' : ref; return map[ref.id] || ref.name || (ref.id === 'UnknownDriverId' ? 'Unknown driver' : ref.id) || ''; }
+
+  function normalize(raw, names) {
+    var tags = readTags();
+    return raw.map(function (r) {
+      var list = (r.defectList && r.defectList.name) || 'No checklist';
+      var hinted = Object.keys(r).some(function (k) { return BETA_HINT.test(k); }) || /(^|[^a-z])beta([^a-z]|$)/i.test(list);
+      var beta = tags[list] != null ? tags[list] === 'beta' : hinted;
+      var defs = (r.dVIRDefects || r.dvirDefects || []).map(function (d) {
+        return {
+          name: (d.defect && (d.defect.name || names.groups[d.defect.id])) || 'Unnamed defect',
+          part: (d.part && (d.part.name || names.groups[d.part.id])) || '',
+          status: d.repairStatus || 'NotRepaired',
+          repairDate: d.repairDateTime || null,
+          remark: (d.defectRemarks || []).map(function (x) { return x.remark; }).filter(Boolean).join(' · ')
+        };
+      });
+      var assetRef = r.trailer || r.device;
+      return {
+        id: r.id, date: new Date(r.dateTime), dateIso: r.dateTime,
+        asset: r.trailer ? nameOf(names.trailers, r.trailer) : nameOf(names.devices, r.device),
+        assetKind: r.trailer ? 'Trailer' : 'Vehicle',
+        driver: nameOf(names.users, r.driver) || 'No driver',
+        type: r.logType || 'Unknown', list: list, beta: beta, hinted: hinted,
+        safe: r.isSafeToOperate !== false, certified: !!r.certifyDate,
+        remark: r.driverRemark || r.defectRemark || '', defects: defs, assetId: assetRef && assetRef.id
+      };
+    }).sort(function (a, b) { return b.date - a.date; });
+  }
+
+  // ---- filters ----
+  function filtered() {
+    var v = $('f-version').value, ty = $('f-type').value, li = $('f-list').value, as = $('f-asset').value, st = $('f-status').value, dv = $('f-driver').value;
+    return logs.filter(function (l) {
+      if (v && (v === 'beta') !== l.beta) return false;
+      if (ty && l.type !== ty) return false;
+      if (li && l.list !== li) return false;
+      if (as && l.asset !== as) return false;
+      if (dv && l.driver !== dv) return false;
+      if (st && !l.defects.some(function (d) { return d.status === st; })) return false;
+      return true;
+    });
+  }
+  function defectRows(rows) {
+    var st = $('f-status').value, out = [];
+    rows.forEach(function (l) { l.defects.forEach(function (d) { if (!st || d.status === st) out.push({ log: l, d: d }); }); });
+    return out;
+  }
+  function fillSelect(id, values, label) {
+    var s = $(id), cur = s.value;
+    s.innerHTML = '<option value="">' + label + '</option>' + values.map(function (v) { return '<option value="' + esc(v[0]) + '">' + esc(v[1]) + '</option>'; }).join('');
+    if (values.some(function (v) { return v[0] === cur; })) s.value = cur;
+  }
+  function uniq(arr) { return Array.from(new Set(arr)).sort(); }
+
+  // ---- period math ----
+  function periodKey(d, p) {
+    if (p === 'day') return ymd(d);
+    if (p === 'month') return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    if (p === 'year') return String(d.getFullYear());
+    var s = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()); return ymd(s); // week starts Sunday
+  }
+  function periodLabel(k, p) {
+    if (p === 'day') return parseDay(k).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    if (p === 'week') { var s = parseDay(k), e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6); return 'Week of ' + s.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' – ' + e.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+    if (p === 'month') { var q = k.split('-'); return new Date(+q[0], +q[1] - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); }
+    return k;
+  }
+  function allPeriods(from, to, p) {
+    var keys = [], seen = {};
+    for (var d = new Date(from); d < to; d.setDate(d.getDate() + 1)) { var k = periodKey(d, p); if (!seen[k]) { seen[k] = 1; keys.push(k); } }
+    return keys.reverse();
+  }
+  function events(rows, metric) {
+    // returns [{date, split values}] one per counted item
+    var out = [];
+    rows.forEach(function (l) {
+      if (metric === 'insp') out.push({ date: l.date, log: l });
+      else if (metric === 'withDefects') { if (l.defects.length) out.push({ date: l.date, log: l }); }
+      else if (metric === 'defects') l.defects.forEach(function () { out.push({ date: l.date, log: l }); });
+      else if (metric === 'repaired') l.defects.forEach(function (d) { if (d.status === 'Repaired') out.push({ date: d.repairDate ? new Date(d.repairDate) : l.date, log: l }); });
+    });
+    return out;
+  }
+
+  // ---- render ----
+  function range() { return { from: parseDay($('fw-from').value), to: parseDay($('fw-to').value, true) }; }
+
+  function render() {
+    var rows = filtered(), dr = defectRows(rows);
+    var r = range(), days = Math.max(1, Math.round((r.to - r.from) / DAY));
+    var openN = dr.filter(function (x) { return x.d.status === 'NotRepaired'; }).length;
+    var fixedN = dr.filter(function (x) { return x.d.status === 'Repaired'; }).length;
+    var betaN = rows.filter(function (l) { return l.beta; }).length;
+    var unsafe = rows.filter(function (l) { return !l.safe; }).length;
+    var withD = rows.filter(function (l) { return l.defects.length; }).length;
+    var assets = uniq(rows.map(function (l) { return l.asset; })).length;
+    $('fw-kpis').innerHTML = [
+      [fmt(rows.length), 'Inspections done', fmt(rows.length / days) + ' per day'],
+      [fmt(rows.length - betaN) + ' / ' + fmt(betaN), 'Standard / New (beta)', rows.length ? Math.round(betaN / rows.length * 100) + '% on the new version' : ''],
+      [fmt(dr.length), 'Defects reported', fmt(withD) + ' inspections had defects'],
+      [fmt(openN), 'Open defects', 'Not yet repaired'],
+      [fmt(fixedN), 'Defects repaired', dr.length ? Math.round(fixedN / dr.length * 100) + '% of reported' : ''],
+      [fmt(unsafe), 'Not safe to operate', 'Driver marked unsafe'],
+      [fmt(assets), 'Assets inspected', 'Vehicles and trailers']
+    ].map(function (k) { return '<div class="fw-kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span><small>' + k[2] + '</small></div>'; }).join('');
+
+    renderCalc(rows, r);
+    renderTypes(rows);
+    renderLists();
+    renderDefectTypes(dr);
+    renderAssets(rows, dr);
+    renderDrivers(rows, dr, r);
+    renderList(rows, dr);
+  }
+
+  function renderCalc(rows, r) {
+    var metric = $('c-metric').value, p = $('c-period').value, split = $('c-split').value;
+    var ev = events(rows, metric);
+    var days = dayCount(r.from, r.to), total = ev.length;
+    var counts = {}, splitKeys = {};
+    ev.forEach(function (e) {
+      var k = periodKey(e.date, p);
+      var s = split === 'version' ? (e.log.beta ? 'New (beta)' : 'Standard') : split === 'type' ? (TYPE_NAMES[e.log.type] || e.log.type) : split === 'driver' ? (e.log.driver || 'No driver') : 'Total';
+      splitKeys[s] = 1;
+      counts[k] = counts[k] || {}; counts[k][s] = (counts[k][s] || 0) + 1;
+    });
+    var keys = allPeriods(r.from, r.to, p);
+    var totals = keys.map(function (k) { var c = counts[k] || {}; return Object.keys(c).reduce(function (a, s) { return a + c[s]; }, 0); });
+    var max = Math.max.apply(null, totals.concat([1]));
+    var busiest = keys[totals.indexOf(max)];
+    var workDays = 0; for (var dd = new Date(r.from); dd < r.to; dd.setDate(dd.getDate() + 1)) { var wd = dd.getDay(); if (wd && wd < 6) workDays++; }
+    $('c-avgs').innerHTML = [
+      [fmt(total), 'Total in range'],
+      [fmt(total / days), 'Average per day'],
+      [fmt(total / Math.max(1, workDays)), 'Per weekday (Mon–Fri)'],
+      [fmt(total / days * 7), 'Average per week'],
+      [fmt(total / days * 30.44), 'Average per month'],
+      [fmt(total / days * 365.25), 'Yearly pace'],
+      [total ? fmt(max) : '0', total ? 'Busiest: ' + periodLabel(busiest, p) : 'Busiest period']
+    ].map(function (a) { return '<div><b>' + a[0] + '</b><span>' + esc(a[1]) + '</span></div>'; }).join('');
+    var cols = Object.keys(splitKeys).sort();
+    var showSplit = split && cols.length;
+    var head = '<tr><th>' + { day: 'Day', week: 'Week', month: 'Month', year: 'Year' }[p] + '</th>' + (showSplit ? cols.map(function (c) { return '<th class="n">' + esc(c) + '</th>'; }).join('') : '') + '<th class="n">Total</th><th style="width:30%"></th></tr>';
+    var body = keys.map(function (k, i) {
+      var c = counts[k] || {};
+      return '<tr><td>' + esc(periodLabel(k, p)) + '</td>' + (showSplit ? cols.map(function (s) { return '<td class="n">' + fmt(c[s] || 0) + '</td>'; }).join('') : '') +
+        '<td class="n"><b>' + fmt(totals[i]) + '</b></td><td><div class="fw-meter"><i style="width:' + (totals[i] / max * 100) + '%"></i></div></td></tr>';
+    }).join('');
+    $('c-table').innerHTML = '<thead>' + head + '</thead><tbody>' + (body || '<tr><td class="fw-empty">Nothing in this range.</td></tr>') + '</tbody>';
+  }
+
+  function tally(items, keyFn) {
+    var m = {}; items.forEach(function (i) { var k = keyFn(i); m[k] = (m[k] || 0) + 1; });
+    return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return b[1] - a[1]; });
+  }
+
+  function renderTypes(rows) {
+    var m = {};
+    rows.forEach(function (l) {
+      var x = m[l.type] = m[l.type] || { n: 0, std: 0, beta: 0, defects: 0, unsafe: 0 };
+      x.n++; x[l.beta ? 'beta' : 'std']++; x.defects += l.defects.length; if (!l.safe) x.unsafe++;
+    });
+    var keys = Object.keys(m).sort(function (a, b) { return m[b].n - m[a].n; });
+    $('t-types').innerHTML = '<thead><tr><th>Type</th><th class="n">Done</th><th class="n">Standard</th><th class="n">Beta</th><th class="n">Defects</th><th class="n">Unsafe</th></tr></thead><tbody>' +
+      (keys.map(function (k) { var x = m[k]; return '<tr><td>' + esc(TYPE_NAMES[k] || k) + '</td><td class="n"><b>' + fmt(x.n) + '</b></td><td class="n">' + fmt(x.std) + '</td><td class="n">' + fmt(x.beta) + '</td><td class="n">' + fmt(x.defects) + '</td><td class="n">' + fmt(x.unsafe) + '</td></tr>'; }).join('') || '<tr><td class="fw-empty">No inspections.</td></tr>') + '</tbody>';
+  }
+
+  function renderLists() {
+    var m = {};
+    logs.forEach(function (l) { var x = m[l.list] = m[l.list] || { n: 0, beta: l.beta, hinted: false }; x.n++; if (l.hinted) x.hinted = true; });
+    var keys = Object.keys(m).sort(function (a, b) { return m[b].n - m[a].n; });
+    $('t-lists').innerHTML = '<thead><tr><th>Checklist</th><th class="n">Inspections</th><th>Version</th></tr></thead><tbody>' +
+      (keys.map(function (k) {
+        return '<tr><td>' + esc(k) + (m[k].hinted ? ' <span class="sub">(auto-detected)</span>' : '') + '</td><td class="n">' + fmt(m[k].n) + '</td><td><button type="button" class="pill ' + (m[k].beta ? 'beta' : 'std') + '" data-list="' + esc(k) + '" style="min-height:0;border:0">' + (m[k].beta ? 'New (beta)' : 'Standard') + '</button></td></tr>';
+      }).join('') || '<tr><td class="fw-empty">No checklists yet.</td></tr>') + '</tbody>';
+  }
+
+  function renderDefectTypes(dr) {
+    var m = {};
+    dr.forEach(function (x) {
+      var k = x.d.name + '\u0000' + x.d.part;
+      var y = m[k] = m[k] || { name: x.d.name, part: x.d.part, n: 0, open: 0, fixed: 0, nn: 0 };
+      y.n++; if (x.d.status === 'Repaired') y.fixed++; else if (x.d.status === 'NotNecessary') y.nn++; else y.open++;
+    });
+    var list = Object.keys(m).map(function (k) { return m[k]; }).sort(function (a, b) { return b.n - a.n; });
+    $('t-defects').innerHTML = '<thead><tr><th>Defect</th><th>Category / part</th><th class="n">Reported</th><th class="n">Open</th><th class="n">Repaired</th><th class="n">Not needed</th></tr></thead><tbody>' +
+      (list.map(function (y) { return '<tr><td>' + esc(y.name) + '</td><td class="sub">' + esc(y.part || '—') + '</td><td class="n"><b>' + y.n + '</b></td><td class="n">' + (y.open ? '<span class="pill open">' + y.open + '</span>' : '0') + '</td><td class="n">' + y.fixed + '</td><td class="n">' + y.nn + '</td></tr>'; }).join('') || '<tr><td class="fw-empty">No defects in this range.</td></tr>') + '</tbody>';
+  }
+
+  function renderAssets(rows, dr) {
+    var m = {};
+    rows.forEach(function (l) { var x = m[l.asset] = m[l.asset] || { kind: l.assetKind, insp: 0, def: 0, open: 0, last: l.date }; x.insp++; if (l.date > x.last) x.last = l.date; });
+    dr.forEach(function (x) { var y = m[x.log.asset]; y.def++; if (x.d.status === 'NotRepaired') y.open++; });
+    var list = Object.keys(m).sort(function (a, b) { return m[b].def - m[a].def || m[b].insp - m[a].insp; });
+    $('t-assets').innerHTML = '<thead><tr><th>Asset</th><th class="n">Inspections</th><th class="n">Defects</th><th class="n">Open</th><th>Last inspected</th></tr></thead><tbody>' +
+      (list.map(function (k) { var x = m[k]; return '<tr><td>' + esc(k) + ' <span class="sub">' + x.kind + '</span></td><td class="n">' + x.insp + '</td><td class="n"><b>' + x.def + '</b></td><td class="n">' + (x.open ? '<span class="pill open">' + x.open + '</span>' : '0') + '</td><td class="sub">' + esc(x.last.toLocaleDateString()) + '</td></tr>'; }).join('') || '<tr><td class="fw-empty">No assets.</td></tr>') + '</tbody>';
+  }
+
+  function renderDrivers(rows, dr, r) {
+    var weeks = Math.max(1, dayCount(r.from, r.to) / 7), m = {};
+    rows.forEach(function (l) {
+      var x = m[l.driver] = m[l.driver] || { n: 0, pre: 0, post: 0, other: 0, beta: 0, def: 0, withD: 0, open: 0, unsafe: 0, assets: {}, last: l.date };
+      x.n++; if (l.type === 'PreTrip') x.pre++; else if (l.type === 'PostTrip') x.post++; else x.other++;
+      if (l.beta) x.beta++; if (l.defects.length) x.withD++; if (!l.safe) x.unsafe++;
+      x.assets[l.asset] = 1; if (l.date > x.last) x.last = l.date;
+    });
+    dr.forEach(function (y) { var x = m[y.log.driver]; x.def++; if (y.d.status === 'NotRepaired') x.open++; });
+    var list = Object.keys(m).sort(function (a, b) { return m[b].n - m[a].n; });
+    var max = list.length ? m[list[0]].n : 1;
+    $('t-drivers').innerHTML = '<thead><tr><th>Driver</th><th class="n">Inspections</th><th class="n">Per week</th><th class="n">Pre-trip</th><th class="n">Post-trip</th><th class="n">Other</th><th class="n">Beta</th><th class="n">Defects found</th><th class="n">Open</th><th class="n">Unsafe</th><th class="n">Assets</th><th>Last inspection</th><th style="width:12%"></th></tr></thead><tbody>' +
+      (list.map(function (k) {
+        var x = m[k];
+        return '<tr><td>' + esc(k || 'No driver') + '</td><td class="n"><b>' + fmt(x.n) + '</b></td><td class="n">' + fmt(x.n / weeks) + '</td><td class="n">' + x.pre + '</td><td class="n">' + x.post + '</td><td class="n">' + x.other + '</td><td class="n">' + x.beta + '</td><td class="n">' + x.def + '</td><td class="n">' + (x.open ? '<span class="pill open">' + x.open + '</span>' : '0') + '</td><td class="n">' + (x.unsafe ? '<span class="pill unsafe">' + x.unsafe + '</span>' : '0') + '</td><td class="n">' + Object.keys(x.assets).length + '</td><td class="sub">' + esc(when(x.last.toISOString())) + '</td><td><div class="fw-meter"><i style="width:' + (x.n / max * 100) + '%"></i></div></td></tr>';
+      }).join('') || '<tr><td class="fw-empty">No drivers.</td></tr>') + '</tbody>';
+  }
+
+  function verPill(l) { return '<span class="pill ' + (l.beta ? 'beta' : 'std') + '">' + (l.beta ? 'Beta' : 'Standard') + '</span>'; }
+  function statusPill(s) { return '<span class="pill ' + ({ NotRepaired: 'open', Repaired: 'fixed', NotNecessary: 'nn' }[s] || 'open') + '">' + (STATUS_NAMES[s] || s) + '</span>'; }
+
+  function renderList(rows, dr) {
+    var LIMIT = 1000;
+    if (tab === 'defects') {
+      $('t-list').innerHTML = '<thead><tr><th>Reported</th><th>Asset</th><th>Defect</th><th>Category</th><th>Status</th><th>Repaired</th><th>Driver</th><th>Type</th><th>Version</th><th>Remarks</th></tr></thead><tbody>' +
+        (dr.slice(0, LIMIT).map(function (x) {
+          return '<tr><td>' + esc(when(x.log.dateIso)) + '</td><td>' + esc(x.log.asset) + '</td><td>' + esc(x.d.name) + '</td><td class="sub">' + esc(x.d.part || '—') + '</td><td>' + statusPill(x.d.status) + '</td><td class="sub">' + esc(when(x.d.repairDate)) + '</td><td>' + esc(x.log.driver) + '</td><td>' + esc(TYPE_NAMES[x.log.type] || x.log.type) + '</td><td>' + verPill(x.log) + '</td><td class="sub">' + esc(x.d.remark) + '</td></tr>';
+        }).join('') || '<tr><td class="fw-empty" colspan="10">No defects.</td></tr>') + '</tbody>' + (dr.length > LIMIT ? '<caption class="fw-note">Showing the newest ' + LIMIT + ' of ' + dr.length + '. Export CSV for all.</caption>' : '');
+    } else {
+      $('t-list').innerHTML = '<thead><tr><th>Date</th><th>Asset</th><th>Driver</th><th>Type</th><th>Checklist</th><th>Version</th><th class="n">Defects</th><th>Safe</th><th>Certified</th><th>Remark</th></tr></thead><tbody>' +
+        (rows.slice(0, LIMIT).map(function (l) {
+          return '<tr><td>' + esc(when(l.dateIso)) + '</td><td>' + esc(l.asset) + '</td><td>' + esc(l.driver) + '</td><td>' + esc(TYPE_NAMES[l.type] || l.type) + '</td><td class="sub">' + esc(l.list) + '</td><td>' + verPill(l) + '</td><td class="n">' + l.defects.length + '</td><td>' + (l.safe ? 'Yes' : '<span class="pill unsafe">No</span>') + '</td><td>' + (l.certified ? 'Yes' : 'No') + '</td><td class="sub">' + esc(l.remark) + '</td></tr>';
+        }).join('') || '<tr><td class="fw-empty" colspan="10">No inspections.</td></tr>') + '</tbody>' + (rows.length > LIMIT ? '<caption class="fw-note">Showing the newest ' + LIMIT + ' of ' + rows.length + '. Export CSV for all.</caption>' : '');
+    }
+  }
+
+  function refreshFilters() {
+    fillSelect('f-type', uniq(logs.map(function (l) { return l.type; })).map(function (t) { return [t, TYPE_NAMES[t] || t]; }), 'All types');
+    fillSelect('f-list', uniq(logs.map(function (l) { return l.list; })).map(function (t) { return [t, t]; }), 'All checklists');
+    fillSelect('f-asset', uniq(logs.map(function (l) { return l.asset; })).map(function (t) { return [t, t]; }), 'All assets');
+    fillSelect('f-driver', uniq(logs.map(function (l) { return l.driver || 'No driver'; })).map(function (t) { return [t, t]; }), 'All drivers');
+  }
+
+  function csv() {
+    var rows = filtered(), lines = [['Inspection date', 'Asset', 'Asset kind', 'Driver', 'Inspection type', 'Checklist', 'Version', 'Safe to operate', 'Certified', 'Defect', 'Category', 'Defect status', 'Repair date', 'Remarks']];
+    rows.forEach(function (l) {
+      var base = [l.dateIso, l.asset, l.assetKind, l.driver, TYPE_NAMES[l.type] || l.type, l.list, l.beta ? 'New (beta)' : 'Standard', l.safe ? 'Yes' : 'No', l.certified ? 'Yes' : 'No'];
+      if (!l.defects.length) lines.push(base.concat(['', '', '', '', l.remark]));
+      l.defects.forEach(function (d) { lines.push(base.concat([d.name, d.part, STATUS_NAMES[d.status] || d.status, d.repairDate || '', d.remark || l.remark])); });
+    });
+    var text = lines.map(function (r) { return r.map(function (c) { c = String(c == null ? '' : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(','); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv' }));
+    a.download = 'inspections-' + $('fw-from').value + '-to-' + $('fw-to').value + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // ---- load ----
+  var loading = false, names = null;
+  function load() {
+    if (!api || loading) return;
+    var r = range();
+    if (!(r.to > r.from)) { status('Pick a From date before the To date.', true); return; }
+    loading = true; $('fw-load').disabled = true;
+    status('Loading vehicles, trailers and drivers…');
+    var namesReady = names ? Promise.resolve(names) : Promise.all([
+      getAll('Device', ['id', 'name']), getAll('Trailer', ['id', 'name']), getAll('User', ['id', 'name', 'firstName', 'lastName'])
+    ]).then(function (res) {
+      var map = function (arr, fn) { var m = {}; (arr || []).forEach(function (x) { m[x.id] = fn(x); }); return m; };
+      names = {
+        devices: map(res[0], function (x) { return x.name; }),
+        trailers: map(res[1], function (x) { return x.name; }),
+        users: map(res[2], function (x) { var n = [x.firstName, x.lastName].filter(Boolean).join(' '); return n || x.name; }),
+        groups: {}
+      };
+      return names;
+    });
+    namesReady.then(function () {
+      return fetchLogs(r.from, r.to, function (d, n, c) { status('Loading inspections… ' + Math.round(d / n * 100) + '% (' + c + ' found)'); });
+    }).then(function (raw) {
+      logs = normalize(raw, names);
+      refreshFilters(); render();
+      status('Loaded ' + logs.length.toLocaleString() + ' inspections, updated ' + new Date().toLocaleTimeString() + '.');
+    }).catch(function (e) {
+      status('Could not load inspections: ' + e.message, true);
+    }).then(function () { loading = false; $('fw-load').disabled = false; });
+  }
+
+  function setRange(daysBack) {
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    $('fw-to').value = ymd(today);
+    $('fw-from').value = ymd(new Date(today.getTime() - (daysBack - 1) * DAY));
+  }
+  var QUICK = [['Today', 1], ['7 days', 7], ['30 days', 30], ['90 days', 90], ['This year', 'ytd'], ['12 months', 365]];
+  $('fw-quick').innerHTML = QUICK.map(function (q, i) { return '<button type="button" data-q="' + i + '">' + q[0] + '</button>'; }).join('');
+  $('fw-quick').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var q = QUICK[+b.dataset.q][1];
+    if (q === 'ytd') { var t = new Date(); setRange(Math.round((t - new Date(t.getFullYear(), 0, 1)) / DAY) + 1); } else setRange(q);
+    Array.prototype.forEach.call(this.children, function (c) { c.classList.toggle('on', c === b); });
+    load();
+  };
+  setRange(30); $('fw-quick').children[2].classList.add('on');
+
+  $('fw-load').onclick = function () { Array.prototype.forEach.call($('fw-quick').children, function (c) { c.classList.remove('on'); }); load(); };
+  $('fw-csv').onclick = csv;
+  ['f-version', 'f-type', 'f-list', 'f-asset', 'f-driver', 'f-status', 'c-metric', 'c-period', 'c-split'].forEach(function (id) { $(id).onchange = render; });
+  $('fw-tabs').onclick = function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    tab = b.dataset.tab;
+    Array.prototype.forEach.call(this.children, function (c) { c.classList.toggle('on', c === b); });
+    render();
+  };
+  $('t-lists').onclick = function (e) {
+    var b = e.target.closest('button[data-list]'); if (!b) return;
+    var t = readTags(), name = b.dataset.list, isBeta = logs.some(function (l) { return l.list === name && l.beta; });
+    t[name] = isBeta ? 'std' : 'beta'; writeTags(t);
+    logs.forEach(function (l) { if (l.list === name) l.beta = !isBeta; });
+    render();
+  };
+
+  // ---- MyGeotab add-in lifecycle ----
+  window.geotab = window.geotab || {};
+  window.geotab.addin = window.geotab.addin || {};
+  window.geotab.addin.fleetWolfInspectionTracker = function () {
+    return {
+      initialize: function (a, state, done) {
+        api = a;
+        if (a.getSession) a.getSession(function (s) { dbName = (s && s.database) || dbName; done(); }); else done();
+      },
+      focus: function (a) { api = a; load(); },
+      blur: function () { }
+    };
+  };
+
+  // Local preview only: ?demo=1 runs against made-up data, never inside MyGeotab.
+  window.addEventListener('load', function () {
+    if (!/[?&]demo=1/.test(location.search) || !window.FwDemoApi) return;
+    var addin = window.geotab.addin.fleetWolfInspectionTracker();
+    addin.initialize(window.FwDemoApi, {}, function () { addin.focus(window.FwDemoApi); });
+  });
+})();
+</script>
+</body>
+</html>

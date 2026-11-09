@@ -1,0 +1,16 @@
+{
+  "name": "Fleet Wolf Inspection Tracker",
+  "supportEmail": "randy@fleetwolf.com",
+  "version": "1.0.0",
+  "items": [
+    {
+      "url": "https://rthomas91740-hash.github.io/fleetwolf-inspection-tracker/index.html",
+      "path": "ActivityLink",
+      "category": "AddIns",
+      "menuName": {
+        "en": "Inspection & Defect Tracker"
+      }
+    }
+  ],
+  "isSigned": false
+}
